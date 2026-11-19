@@ -1,0 +1,62 @@
+name: Build WebGL
+
+# Builds the North Pole Rush WebGL player in the cloud with GameCI's
+# prebuilt Unity Docker image — no local Unity install required.
+#
+# Required repo secret:
+#   UNITY_LICENSE  — base64-encoded Unity Personal .ulf license file
+#                   (create at https://license.unity3d.com, manual activation,
+#                    download .ulf, then:  base64 -w0 license.ulf  → paste)
+#
+# Deploys to GitHub Pages on every push to main (repo must be public on the
+# free plan, or Pages must be enabled on a private repo with a paid plan).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build WebGL
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          targetPlatform: WebGL
+          unityVersion: 2022.3.41f1
+          buildName: NorthPoleRush
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # unity-builder emits the player to build/<Platform>/
+          path: build/WebGL
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
