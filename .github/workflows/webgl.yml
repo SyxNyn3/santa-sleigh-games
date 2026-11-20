@@ -3,19 +3,25 @@ name: Build WebGL
 # Builds the North Pole Rush WebGL player in the cloud with GameCI's
 # prebuilt Unity Docker image — no local Unity install required.
 #
-# Required repo secrets:
-#   UNITY_LICENSE  — raw contents of Unity_lic.ulf
-#                   (Unity Hub → Preferences → Licenses → Add → free personal
-#                    license; file lands at C:\ProgramData\Unity\Unity_lic.ulf)
-#   UNITY_EMAIL    — Unity account email
-#   UNITY_PASSWORD — Unity account password
+# IMPORTANT: this workflow is MANUAL-ONLY (workflow_dispatch). It will not
+# run on push until we decide how to handle Unity licensing.
 #
-# Deploys to GitHub Pages on every push to main (repo must be public on the
-# free plan, or Pages must be enabled on a private repo with a paid plan).
+# Licensing options:
+#   A) Add repo secret UNITY_LICENSE (contents of Unity_lic.ulf) and run
+#      this workflow manually. .ulf = free Unity Personal activation file
+#      (Unity Hub → Preferences → Licenses → Add). GitHub secrets are
+#      encrypted and write-only — but it's still your call whether to put
+#      it there.
+#   B) Build locally once Unity is installed (MacBook revival or this PC)
+#      and deploy the WebGL output to GitHub Pages / itch.io manually.
+#   C) Self-hosted runner on hardware you control.
+#
+# To enable: uncomment the push trigger below AND add the UNITY_LICENSE
+# secret (repo → Settings → Secrets and variables → Actions).
 
 on:
-  push:
-    branches: [main]
+  # push:
+  #   branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -37,9 +43,8 @@ jobs:
       - name: Build WebGL
         uses: game-ci/unity-builder@v4
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          # Only needed if we go with option A — leave unset otherwise.
+          # UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         with:
           targetPlatform: WebGL
           unityVersion: 2022.3.41f1

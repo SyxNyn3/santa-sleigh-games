@@ -30,6 +30,14 @@ public class CharacterManager : MonoBehaviour
 
     private int _currentLaneIndex;
 
+    // Touch/swipe lane switching for WebGL mobile players.
+    // A horizontal swipe toggles direction based on sign of X delta.
+    [SerializeField]
+    private float _swipeThresholdPixels = 60f;
+
+    private float _touchStartX;
+    private bool _touchActive;
+
     private CharacterController _characterController;
 
     public static CharacterManager Instance { get; private set; }
@@ -72,21 +80,62 @@ public class CharacterManager : MonoBehaviour
         {
             DistanceTravelled += _forwardSpeed * Time.deltaTime;
 
-            // Handle lane switching
+            // Handle lane switching — keyboard
             if (Input.GetKeyDown(KeyCode.A))
             {
-                _currentLaneIndex--;
-                if (_currentLaneIndex < 0)
-                    _currentLaneIndex = _lanesSToSW.Count - 1;
-                _animator.SetTrigger("Roll_Left");
+                SwitchLane(-1);
             }
             else if (Input.GetKeyDown(KeyCode.D))
             {
-                _currentLaneIndex++;
-                if (_currentLaneIndex >= _lanesSToSW.Count)
-                    _currentLaneIndex = 0;
-                _animator.SetTrigger("Roll_Right");
+                SwitchLane(1);
             }
+
+            HandleTouchInput();
+        }
+    }
+
+    private void SwitchLane(int direction)
+    {
+        _currentLaneIndex += direction;
+        if (_currentLaneIndex < 0)
+            _currentLaneIndex = _lanesSToSW.Count - 1;
+        if (_currentLaneIndex >= _lanesSToSW.Count)
+            _currentLaneIndex = 0;
+        _animator.SetTrigger(direction < 0 ? "Roll_Left" : "Roll_Right");
+    }
+
+    private void HandleTouchInput()
+    {
+        // Swipe left/right anywhere on screen to change lanes.
+        // Works for both raw touches (mobile) and WebGL mouse-drag as a
+        // fallback so desktop players can use it too.
+        if (Input.touchCount > 0)
+        {
+            Touch touch = Input.GetTouch(0);
+            if (touch.phase == TouchPhase.Began)
+            {
+                _touchStartX = touch.position.x;
+                _touchActive = true;
+            }
+            else if (touch.phase == TouchPhase.Ended && _touchActive)
+            {
+                float delta = touch.position.x - _touchStartX;
+                if (Mathf.Abs(delta) >= _swipeThresholdPixels)
+                    SwitchLane(delta > 0 ? 1 : -1);
+                _touchActive = false;
+            }
+        }
+        else if (Input.GetMouseButtonDown(0))
+        {
+            _touchStartX = Input.mousePosition.x;
+            _touchActive = true;
+        }
+        else if (Input.GetMouseButtonUp(0) && _touchActive)
+        {
+            float delta = Input.mousePosition.x - _touchStartX;
+            if (Mathf.Abs(delta) >= _swipeThresholdPixels)
+                SwitchLane(delta > 0 ? 1 : -1);
+            _touchActive = false;
         }
     }
 
